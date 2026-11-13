@@ -17,12 +17,16 @@ from .despacho import Despachador
 from .dialogo import Dialogo
 from .enlace import SondaEnlace
 from .equipos import FuenteDatosPlanta
+from .herramientas import ClienteConsultas, Herramientas
 from .historian import Historian
 from .latido import latir
+from .llm import ExtractorLLM
 from .notas import ProcesadorNotas
 from .persistencia import Almacen
 from .planta import ClientePlanta
 from .reloj import RelojPlanta
+from .sensores import DetectorSensores
+from .servidor_mcp import arrancar_en_hilo
 from .transcripcion import TranscriptorWhisper
 
 log = logging.getLogger("sistema")
@@ -53,8 +57,13 @@ def main() -> None:
     historian = Historian(planta)
     notas = ProcesadorNotas(planta, lambda: TranscriptorWhisper(cfg.stt_modelo, cfg.stt_hilos, cfg.stt_beam),
                             bus, reloj, almacen, fuente)
-    dialogo = Dialogo(bus, reloj, fuente, historian, almacen)
+    llm = None
+    if cfg.extractor != "reglas":
+        llm = ExtractorLLM(cfg.llm_url, cfg.llm_modelo, timeout_s=cfg.llm_timeout_s, registrar=almacen.guardar_uso)
+    dialogo = Dialogo(bus, reloj, fuente, historian, almacen, llm, cfg.extractor)
     notas.siguientes.append(dialogo.nueva_nota)
+    sensores = DetectorSensores(fuente, lambda evento: bus.publicar(Topicos.EVENTOS, evento))
+    despachador.al_leer.append(sensores.lectura)
     despachador.suscribir(Topicos.RECORRIDAS, notas.recibir)
     despachador.suscribir(Topicos.RESPUESTAS, dialogo.recibir_respuesta)
 
@@ -73,6 +82,9 @@ def main() -> None:
     dialogo.arrancar()   # retoma las conversaciones abiertas que quedaron en Postgres
     bus.arrancar()
     threading.Thread(target=precargar_rangos, name="rangos", daemon=True).start()
+    # Las tools de solo lectura, por MCP (HTTP streamable en :8000/mcp), con el mismo reloj de planta.
+    herramientas = Herramientas(ClienteConsultas(cfg.sim_url), hora_planta=reloj.ahora)
+    arrancar_en_hilo(herramientas)
     try:
         latir(bus, cfg.nombre_sistema, reloj, sonda, sin_pendientes, cfg.latido_s, parar)
     finally:

@@ -8,3 +8,5 @@ tests
 docs
 *.md
 .env
+ollama
+evaluacion

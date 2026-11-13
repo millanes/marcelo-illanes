@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import statistics
 import threading
+import time
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
@@ -22,10 +23,13 @@ def _valores(muestras: list[dict]) -> list[float]:
 
 
 class Historian:
-    def __init__(self, planta: ClientePlanta, dias: int = 45) -> None:
+    def __init__(self, planta: ClientePlanta, dias: int = 45, espera_tras_falla_s: float = 300.0) -> None:
         self._planta = planta
         self.dias = dias
         self._rangos: dict[tuple[str, str], tuple[float, float]] = {}
+        # Si el historial falló, no se vuelve a pedir enseguida: cada borrador esperaría los reintentos.
+        self._fallas: dict[tuple[str, str], float] = {}
+        self.espera_tras_falla_s = espera_tras_falla_s
         self._candado = threading.Lock()
 
     def _serie(self, tag: str, variable: str, desde: datetime, hasta: datetime) -> list[float]:
@@ -37,10 +41,14 @@ class Historian:
         with self._candado:
             if clave in self._rangos:
                 return self._rangos[clave]
+            if time.monotonic() - self._fallas.get(clave, -1e9) < self.espera_tras_falla_s:
+                return None
         try:
             valores = self._serie(tag, variable, hasta - timedelta(days=self.dias), hasta)
         except Exception as e:
-            log.warning("No se pudo leer el historial de %s %s: %s", tag, variable, e)
+            log.warning("No se pudo leer el historial de %s %s: %s", tag, variable, str(e).splitlines()[0])
+            with self._candado:
+                self._fallas[clave] = time.monotonic()
             return None
         if not valores:
             return None

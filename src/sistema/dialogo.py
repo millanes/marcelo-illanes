@@ -30,6 +30,7 @@ from .equipos import A_KG, Catalogo, FuenteDatosPlanta
 from .eventos import SENSOR_DE, eventos_del_parte, motivos
 from .extractor import DIFERENCIAL_ALTO, RODAMIENTO_CALIENTE, TIPO_DE, UNIDAD_FIJA, Fila, extraer
 from .historian import Historian
+from .llm import ExtractorLLM, a_filas
 from .notas import NotaProcesada
 from .persistencia import Almacen
 from .reloj import RelojPlanta
@@ -150,14 +151,27 @@ def aplicar(filas: list[Fila], correcciones: list[Correccion], catalogo: Catalog
                 filas.remove(candidatas[-1])
 
 
+def _combinar(reglas: list[Fila], modelo: list[Fila]) -> list[Fila]:
+    """Las filas de las reglas más las que entendió el modelo y las reglas no."""
+    vistas = {(f.tag, f.variable) for f in reglas}
+    return reglas + [f for f in modelo if (f.tag, f.variable) not in vistas]
+
+
+def _sin_novedad(texto: str) -> bool:
+    t = texto.lower()
+    return "sin novedad" in t or "todo normal" in t
+
+
 class Dialogo:
     def __init__(self, bus, reloj: RelojPlanta, fuente: FuenteDatosPlanta, historian: Historian | None = None,
-                 almacen: Almacen | None = None) -> None:
+                 almacen: Almacen | None = None, llm: ExtractorLLM | None = None, modo: str = "mixto") -> None:
         self._bus = bus
         self._reloj = reloj
         self._fuente = fuente
         self._historian = historian
         self._almacen = almacen
+        self._llm = llm
+        self.modo = modo   # "reglas", "llm" o "mixto"
         self.conversaciones: dict[str, Conversacion] = {}
         self._por_mensaje: dict[str, str] = {}
         self._cola: queue.Queue[tuple[str, object] | None] = queue.Queue()
@@ -203,6 +217,8 @@ class Dialogo:
         nota = procesada.nota
         datos = self._fuente.obtener()
         filas = extraer(procesada.texto, datos.catalogo, nota.fotos) if datos else []
+        if datos and not procesada.hallazgos:
+            filas = self._con_modelo(procesada.texto, filas, datos.catalogo)
         conv = Conversacion(nota, procesada.texto, filas, seguridad=[h.codigo for h in procesada.hallazgos])
         self.conversaciones[nota.id] = conv
         if conv.seguridad:
@@ -219,6 +235,24 @@ class Dialogo:
         else:
             self._seguir(conv)
         return conv
+
+    def _con_modelo(self, texto: str, reglas: list[Fila], catalogo: Catalogo) -> list[Fila]:
+        """En modo "mixto" el modelo de lenguaje entra solo cuando las reglas no sacaron ninguna fila de una
+        nota que dice algo; en modo "llm", siempre (y las reglas quedan de respaldo)."""
+        if self._llm is None or self.modo == "reglas":
+            return reglas
+        if self.modo == "mixto" and (reglas or _sin_novedad(texto) or len(texto.split()) < 4):
+            return reglas
+        filas_modelo = self._llm.extraer(texto)
+        if filas_modelo is None:
+            return reglas
+        filas = a_filas(filas_modelo, catalogo)
+        if self.modo == "llm":
+            fotos = {(f.tag, f.variable): f.foto for f in reglas if f.foto}
+            for f in filas:
+                f.foto = fotos.get((f.tag, f.variable))
+            return filas
+        return _combinar(reglas, filas)
 
     def _seguir(self, conv: Conversacion) -> None:
         if any(f.valor is not None for f in conv.filas):

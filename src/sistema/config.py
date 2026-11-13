@@ -22,6 +22,12 @@ class Config:
     stt_modelo: str = "/modelos/whisper"
     stt_hilos: int = 2
     stt_beam: int = 1
+    # Modelo de lenguaje local (Ollama). EXTRACTOR: "reglas", "llm" o "mixto" (reglas y el modelo para lo
+    # que las reglas no entienden).
+    llm_url: str = "http://ollama:11434"
+    llm_modelo: str = "qwen2.5:1.5b"
+    llm_timeout_s: float = 60.0
+    extractor: str = "mixto"
 
     @classmethod
     def desde_entorno(cls, entorno: Mapping[str, str] | None = None) -> Config:

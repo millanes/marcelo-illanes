@@ -116,6 +116,11 @@ class FuenteDatosPlanta:
         self._datos: DatosPlanta | None = None
         self._candado = threading.Lock()
 
+    @property
+    def cargados(self) -> DatosPlanta | None:
+        """Los datos si ya se leyeron, sin ir a buscarlos (para el hilo de red, que no puede esperar)."""
+        return self._datos
+
     def obtener(self) -> DatosPlanta | None:
         with self._candado:
             if self._datos is None:

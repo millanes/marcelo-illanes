@@ -50,6 +50,19 @@ CREATE TABLE IF NOT EXISTS notas (
     procesada       timestamptz NOT NULL DEFAULT now()
 );
 
+-- Cada llamado a un modelo de lenguaje: tokens y tiempo, para el registro de consumo y costo.
+CREATE TABLE IF NOT EXISTS usos_modelo (
+    id              bigserial PRIMARY KEY,
+    registrado      timestamptz NOT NULL DEFAULT now(),
+    modelo          text NOT NULL,
+    tarea           text NOT NULL,
+    tokens_entrada  int NOT NULL,
+    tokens_salida   int NOT NULL,
+    segundos        real NOT NULL,
+    ok              boolean NOT NULL,
+    error           text
+);
+
 -- La conversación de cada parte con el operador: lo que hace falta para retomarla después de un reinicio.
 CREATE TABLE IF NOT EXISTS partes (
     nota_id     text PRIMARY KEY,
@@ -133,6 +146,23 @@ class Almacen:
                 return True
             except psycopg.Error as e:
                 log.warning("No se pudo guardar el parte de %s: %s", nota.id, e)
+                self._descartar()
+                return False
+
+    def guardar_uso(self, uso) -> bool:
+        """Un llamado a un modelo de lenguaje (sistema.llm.Uso)."""
+        with self._candado:
+            conexion = self._conectar()
+            if conexion is None:
+                return False
+            try:
+                conexion.execute(
+                    """INSERT INTO usos_modelo (modelo, tarea, tokens_entrada, tokens_salida, segundos, ok, error)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                    (uso.modelo, uso.tarea, uso.tokens_entrada, uso.tokens_salida, uso.segundos, uso.ok, uso.error))
+                return True
+            except psycopg.Error as e:
+                log.warning("No se pudo guardar el uso del modelo: %s", e)
                 self._descartar()
                 return False
 

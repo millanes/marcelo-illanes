@@ -21,6 +21,10 @@ ARG STT_MODELO=small
 RUN python -c "from faster_whisper.utils import download_model; download_model('${STT_MODELO}', output_dir='/modelos/whisper')"
 ENV STT_MODELO=/modelos/whisper HF_HUB_OFFLINE=1
 
+# Datos estructurados que la API de la planta no sirve: repuestos, stock, lista de materiales y tareas.
+COPY datos ./datos
+ENV MATERIALES_YAML=/app/datos/materiales.yaml
+
 # Después el código, sin volver a resolver dependencias.
 COPY src ./src
 RUN pip install --no-deps .

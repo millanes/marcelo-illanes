@@ -39,6 +39,7 @@ class Despachador:
         self.reloj = reloj
         self.almacen = almacen
         self.lecturas: dict[tuple[str, str], LecturaSensor] = {}   # la última de cada tag y variable
+        self.al_leer: list[Callable[[LecturaSensor], object]] = []  # se llaman por cada lectura, en el hilo de red
         self.hay_energia: bool | None = None
         self._manejadores: dict[str, list[Manejador]] = {}
         self._cola: queue.Queue[tuple[str, bytes] | None] = queue.Queue()
@@ -74,6 +75,11 @@ class Despachador:
             log.info("Llegan lecturas de sensores; hora de la planta: %s", lectura.ts.isoformat())
         self.lecturas[(lectura.tag, lectura.variable)] = lectura
         self.reloj.observar(lectura.ts)
+        for observador in self.al_leer:
+            try:
+                observador(lectura)
+            except Exception:
+                log.exception("Falló un observador de sensores")
 
     def _atender(self) -> None:
         if self.almacen:
