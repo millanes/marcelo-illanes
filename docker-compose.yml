@@ -1,0 +1,69 @@
+# Sistema de la planta de inyección (TP Academia Novit 2026).
+# Corre al lado de la planta simulada: primero se levanta la planta (repo academia2026-tp) y después este compose.
+#
+# Todo lo que está acá corre en la PC de la sala de control, así que cada servicio:
+#   - va solo en la red planta-lan, que crea la planta y no tiene salida a internet;
+#   - lleva el label academia.planta: pc (sin luz, la planta mata estos contenedores y los vuelve a prender);
+#   - sale a internet solo por el proxy "enlace", que se corta cuando se cae el radioenlace.
+# Entre todos los servicios no pueden pasar de 4 CPU y 8 GB. Por ahora: sistema 2 CPU / 2 GB (incluye la
+# transcripción con Whisper) y Postgres 0,5 CPU / 512 MB. Quedan 1,5 CPU / 5,5 GB para el modelo de lenguaje.
+
+x-pc-de-planta: &pc-de-planta
+  networks: [planta-lan]
+  labels:
+    academia.planta: pc
+  # Si el proceso se cae, Docker lo levanta. Si la planta lo apaga por falta de luz (docker kill), no:
+  # lo vuelve a prender la planta cuando vuelve la energía.
+  restart: unless-stopped
+
+x-proxy: &proxy
+  HTTP_PROXY: http://enlace:3128
+  HTTPS_PROXY: http://enlace:3128
+  # Los servicios de la red local no pasan por el proxy: si se cae el enlace, tienen que seguir andando.
+  NO_PROXY: broker,sim,localhost,postgres
+  http_proxy: http://enlace:3128
+  https_proxy: http://enlace:3128
+  no_proxy: broker,sim,localhost,postgres
+
+services:
+  sistema:
+    <<: *pc-de-planta
+    build: .
+    environment:
+      <<: *proxy
+      NOMBRE_SISTEMA: marcelo-illanes
+      MQTT_HOST: broker
+      SIM_URL: http://sim:8100
+      DATABASE_URL: postgresql://sistema:sistema@postgres:5432/sistema
+      STT_HILOS: "2"      # igual al límite de CPU: Whisper por defecto usa todos los núcleos de la máquina
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: {cpus: "2", memory: 2g}
+
+  postgres:
+    <<: *pc-de-planta
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: sistema
+      POSTGRES_PASSWORD: sistema
+      POSTGRES_DB: sistema
+    volumes:
+      - datos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sistema -d sistema"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 512m}
+
+networks:
+  planta-lan:
+    external: true
+
+volumes:
+  datos-postgres:
