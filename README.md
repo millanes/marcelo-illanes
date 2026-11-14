@@ -65,7 +65,7 @@ En Linux o macOS, `.venv/bin/python` en lugar de `.venv/Scripts/python`.
 python correccion/corregir.py --repo ../marcelo-illanes --escenarios martes-tranquilo fuga-sin-enlace
 ```
 
-Última corrida: **88,9 / 100, aprueba**. A1, A4a, A4b, B1, B2, F1 y F2 al 100 %. A2 y A3 al 69 %: las 10 notas con lecturas se confirmaron al primer borrador; las que no se confirman son las que no tienen ninguna lectura con número ("la bomba está parada, en reserva" y la nota de la fuga), que el operador virtual no puede confirmar porque solo compara valores.
+Últimas corridas con el sistema completo: **entre 87,3 y 88,9 / 100, aprueba**. A1, A4a, A4b, B1, B2, F1 y F2 al 100 %. A2 y A3 entre 64 y 69 %: las notas que no se confirman son las que no tienen ninguna lectura con número ("la bomba está parada, en reserva" y la nota de la fuga), que el operador virtual no puede confirmar porque solo compara valores. En la corrida de 87,3 se sumó una nota en la que Whisper escribió "pese" por "psi" y "el fito a" por "el filtro A"; ya está corregido y quedó como test.
 
 **Parte contra la verdad de campo** ([evaluacion/parte.py](evaluacion/parte.py), resultados en [evaluacion/resultados_parte.md](evaluacion/resultados_parte.md)). Usa las corridas del corrector (verdad de campo y transcripciones reales) y compara campo por campo cada extractor:
 

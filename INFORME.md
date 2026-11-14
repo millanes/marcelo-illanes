@@ -64,9 +64,10 @@ detalle en `evaluacion/resultados_parte.md`):
 | `qwen3.5:2b` | 27 % | 18 % | 27 % | 23 % | 62 s |
 | `qwen2.5:1.5b` | 5 % | 5 % | 5 % | 15 % | 85 s |
 
-**Corrector de la planta** (`martes-tranquilo` y `fuga-sin-enlace`): 88,9 / 100. A1, A4a, A4b, B1, B2, F1 y F2
-al 100 %; A2 y A3 al 69 %, que es el techo con estos escenarios (las notas sin lecturas con número no se
-pueden confirmar).
+**Corrector de la planta** (`martes-tranquilo` y `fuga-sin-enlace`): entre 87,3 y 88,9 / 100 en las últimas
+corridas. A1, A4a, A4b, B1, B2, F1 y F2 al 100 %; A2 y A3 entre 64 y 69 %. El 69 % es el techo con estos
+escenarios (las notas sin lecturas con número no se pueden confirmar); la diferencia fue una nota con dos
+errores de Whisper ("pese", "el fito a") que ya se corrigió. La alerta de la fuga salió entre 2,7 y 7,7 s.
 
 **RAG** (evaluador oficial de la planta, 71 preguntas; detalle en `evaluacion/resultados_rag.md`):
 
