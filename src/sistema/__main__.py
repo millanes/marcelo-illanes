@@ -24,6 +24,7 @@ from .llm import ExtractorLLM
 from .notas import ProcesadorNotas
 from .persistencia import Almacen
 from .planta import ClientePlanta
+from .rag import EmbebedorLocal, Manuales
 from .reloj import RelojPlanta
 from .sensores import DetectorSensores
 from .servidor_mcp import arrancar_en_hilo
@@ -82,8 +83,13 @@ def main() -> None:
     dialogo.arrancar()   # retoma las conversaciones abiertas que quedaron en Postgres
     bus.arrancar()
     threading.Thread(target=precargar_rangos, name="rangos", daemon=True).start()
+    # Manuales: baja los documentos de la planta y los indexa en pgvector en un hilo de prioridad mínima,
+    # solo si cambiaron. Hasta que termina, buscar_manuales contesta que se está preparando.
+    manuales = Manuales(planta.descargar, cfg.database_url,
+                        EmbebedorLocal(cfg.rag_modelo, cfg.rag_cache, cfg.rag_hilos))
+    manuales.arrancar(parar)
     # Las tools de solo lectura, por MCP (HTTP streamable en :8000/mcp), con el mismo reloj de planta.
-    herramientas = Herramientas(ClienteConsultas(cfg.sim_url), hora_planta=reloj.ahora)
+    herramientas = Herramientas(ClienteConsultas(cfg.sim_url), buscador=manuales, hora_planta=reloj.ahora)
     arrancar_en_hilo(herramientas)
     try:
         latir(bus, cfg.nombre_sistema, reloj, sonda, sin_pendientes, cfg.latido_s, parar)

@@ -19,7 +19,11 @@ RUN mkdir -p src/sistema && touch src/sistema/__init__.py \
 # al construir (Whisper small convertido a CTranslate2, de Systran en Hugging Face).
 ARG STT_MODELO=small
 RUN python -c "from faster_whisper.utils import download_model; download_model('${STT_MODELO}', output_dir='/modelos/whisper')"
-ENV STT_MODELO=/modelos/whisper HF_HUB_OFFLINE=1
+
+# Modelo de embeddings del RAG de manuales, también adentro de la imagen (fastembed, ONNX en CPU, unos 0,6 GB).
+ARG RAG_MODELO=jinaai/jina-embeddings-v2-base-es
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding('${RAG_MODELO}', cache_dir='/modelos/embeddings')"
+ENV STT_MODELO=/modelos/whisper RAG_MODELO=${RAG_MODELO} RAG_CACHE=/modelos/embeddings HF_HUB_OFFLINE=1
 
 # Datos estructurados que la API de la planta no sirve: repuestos, stock, lista de materiales y tareas.
 COPY datos ./datos

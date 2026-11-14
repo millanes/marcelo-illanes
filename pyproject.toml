@@ -23,6 +23,10 @@ dependencies = [
     # Tools de solo lectura expuestas por MCP; materiales y tareas en YAML.
     "mcp>=2.3,<3",
     "pyyaml>=6,<7",
+    # RAG de manuales: embeddings locales en CPU (fastembed, ONNX) y el tipo vector de pgvector para psycopg.
+    "fastembed>=0.9,<0.10",
+    "pgvector>=0.3,<0.6",
+    "numpy>=1.26,<3",
 ]
 
 [project.optional-dependencies]

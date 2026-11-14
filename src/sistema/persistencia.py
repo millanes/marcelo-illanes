@@ -79,6 +79,19 @@ CREATE TABLE IF NOT EXISTS partes (
 """
 
 
+CANDADO_ESQUEMA = 726514   # clave del advisory lock con el que se crean los esquemas
+
+
+def crear_esquema(conexion: psycopg.Connection, sql: str) -> None:
+    """Corre un esquema con un candado de Postgres: el sistema y el RAG arrancan a la vez y
+    "CREATE EXTENSION IF NOT EXISTS" no es seguro si dos conexiones lo corren al mismo tiempo."""
+    conexion.execute("SELECT pg_advisory_lock(%s)", (CANDADO_ESQUEMA,))
+    try:
+        conexion.execute(sql)
+    finally:
+        conexion.execute("SELECT pg_advisory_unlock(%s)", (CANDADO_ESQUEMA,))
+
+
 class Almacen:
     def __init__(self, url: str) -> None:
         self.url = url
@@ -190,7 +203,7 @@ class Almacen:
             return None
         try:
             self._conexion = psycopg.connect(self.url, autocommit=True, connect_timeout=3)
-            self._conexion.execute(ESQUEMA)
+            crear_esquema(self._conexion, ESQUEMA)
             log.info("Conectado a Postgres")
             return self._conexion
         except psycopg.Error as e:

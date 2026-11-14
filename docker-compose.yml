@@ -40,6 +40,7 @@ services:
       LLM_URL: http://ollama:11434
       LLM_MODELO: qwen2.5:1.5b
       EXTRACTOR: mixto    # reglas, y el modelo de lenguaje para lo que las reglas no entienden
+      RAG_HILOS: "2"      # embeddings del RAG con prioridad mínima: le ceden la CPU a Whisper
     depends_on:
       postgres:
         condition: service_healthy
