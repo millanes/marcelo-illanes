@@ -1,0 +1,6 @@
+# Todo lo de texto con LF: las imágenes y los scripts corren en Linux, se clone donde se clone.
+* text=auto eol=lf
+*.wav binary
+*.jpg binary
+*.png binary
+*.pdf binary

@@ -1,8 +1,8 @@
 """¿Hay enlace con la base?
 
 La red de planta no tiene salida a internet: lo único que sale es el proxy `enlace` (HTTPS_PROXY), que
-corta las conexiones cuando se cae el radioenlace. Para saberlo se hace un pedido corto a la nube que va
-a usar el sistema: cualquier respuesta HTTP, aunque sea un error, quiere decir que hay enlace.
+corta las conexiones cuando se cae el radioenlace. Para saberlo se hace un pedido corto a internet a
+través del proxy: cualquier respuesta HTTP, aunque sea un error, quiere decir que hay enlace.
 """
 
 from __future__ import annotations
