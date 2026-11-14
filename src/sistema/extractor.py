@@ -24,6 +24,7 @@ AMBIGUA = "?"   # tag provisorio de "la bomba" a secas
 UNIDADES_DICHAS = {
     "kilos": "kg/cm2", "kilo": "kg/cm2", "kg": "kg/cm2", "kgs": "kg/cm2", "kilogramos": "kg/cm2",
     "kilogramo": "kg/cm2", "psi": "psi", "libras": "psi", "libra": "psi", "lb": "psi", "lbs": "psi",
+    "pese": "psi", "pesi": "psi",   # así escucha Whisper "psi" a veces
     "bar": "bar", "bares": "bar", "metros": "m", "metro": "m", "mts": "m", "grados": "degC", "grado": "degC",
 }
 RELLENO = {"de", "en", "por", "y"}   # entre el número y el ancla: "112 kg de descarga", "1640 psi y de descarga"
@@ -74,6 +75,14 @@ class _Mencion:
     fin: int       # índice del token siguiente al nombre
     tag: str
     dicho: str
+
+
+_FILTRO_MAL_ESCRITO = re.compile(r"\b(el|al|del) fi[a-z]{1,5} (a|b)\b")
+
+
+def _corregir_nombres(texto: str) -> str:
+    """Whisper a veces escribe mal "filtro" ("el fito a"): sin esto, la lectura quedaría en el equipo anterior."""
+    return _FILTRO_MAL_ESCRITO.sub(lambda m: f"{m[1]} filtro {m[2]}", texto)
 
 
 def _me_dio(tokens: list[str]) -> list[str]:
@@ -152,7 +161,7 @@ def _observacion(variable: str, tokens: list[str], i: int) -> str | None:
 
 def extraer(texto: str, catalogo: Catalogo, fotos: list[str] | None = None) -> list[Fila]:
     """Las filas del parte que dice el texto, en el orden en que se dijeron."""
-    tokens = _me_dio(normalizar(preparar(texto)).split())
+    tokens = _me_dio(_corregir_nombres(normalizar(preparar(texto))).split())
     unido = " ".join(tokens)
     menciones = _menciones(unido, catalogo)
     tanque = next(iter(catalogo.de_tipo("tanque")), None)

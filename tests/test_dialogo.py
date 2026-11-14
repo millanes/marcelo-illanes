@@ -103,6 +103,15 @@ def test_una_correccion_con_otra_unidad_va_a_la_lectura_que_corresponde(dialogo,
                                                    ("B-102", "temperatura_rodamiento_ir", 51, "degC")]
 
 
+def test_lo_que_sobra_saca_la_lectura_que_no_es_del_equipo(dialogo, bus):
+    # Un diferencial quedó en la B-102 y el operador agregó la descarga: "sobra" saca el diferencial, no la descarga.
+    dialogo.iniciar(nota("La bomba me dio uno coma tres de diferencial."))
+    contesta(dialogo, bus.tablet()[0], "Era la dos.")
+    contesta(dialogo, bus.tablet()[-1], "No. La dos estaba en mil seiscientos psi, no en uno coma tres. Arreglá eso.")
+    contesta(dialogo, bus.tablet()[-1], "No. Lo de la dos no lo dije. Con eso está.")
+    assert numericas(bus.tablet()[-1]) == [("B-102", "presion_descarga_local", 1600, "psi")]
+
+
 def test_si_la_correccion_no_cambia_nada_no_repite_el_borrador(dialogo, bus):
     dialogo.iniciar(nota("La uno está en ciento catorce kilos de descarga."))
     contesta(dialogo, bus.tablet()[0], "No. Lo de el caudalímetro no lo dije. Con eso está.")

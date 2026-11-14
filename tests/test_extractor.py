@@ -58,6 +58,13 @@ def test_notas_del_operador(catalogo, texto, esperado):
     ("Este, la del medio está en 1610 psi, si de descarga. El rodamiento me dio 51 grados con la pistola.",
      [("B-102", "presion_descarga_local", 1610, "psi", None, None),
       ("B-102", "temperatura_rodamiento_ir", 51, "degC", None, None)]),
+    # "psi" escuchado como "pese" y "el filtro A" como "el fito a", con "la bomba" a secas en el medio.
+    ("La uno está en 112 kilogramos de descarga, el rodamiento medió 59 grados con la pistola, Ambient la bomba "
+     "está en 1600 pese y de descarga, el fito a medio 1,3 de diferencial.",
+     [("B-101", "presion_descarga_local", 112, "kg/cm2", None, None),
+      ("B-101", "temperatura_rodamiento_ir", 59, "degC", None, None),
+      (None, "presion_descarga_local", 1600, "psi", None, "equipo"),
+      ("F-201A", "presion_diferencial", 1.3, "kg/cm2", None, None)]),
 ])
 def test_transcripciones_de_whisper(catalogo, texto, esperado):
     assert filas(texto, catalogo) == esperado

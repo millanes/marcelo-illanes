@@ -146,9 +146,13 @@ def aplicar(filas: list[Fila], correcciones: list[Correccion], catalogo: Catalog
                 filas.append(existente)
             _derivar(existente)
         elif c.tipo == "sobra" and c.tag:
+            # Primero la que no puede ser de ese equipo (un diferencial en una bomba); si no, la más vieja:
+            # las últimas las agregaron correcciones del mismo operador.
             candidatas = [f for f in numericas if f.tag == c.tag]
+            tipo = catalogo.equipos[c.tag].tipo if c.tag in catalogo.equipos else None
+            ajenas = [f for f in candidatas if TIPO_DE.get(f.variable, tipo) != tipo]
             if candidatas:
-                filas.remove(candidatas[-1])
+                filas.remove((ajenas or candidatas)[0])
 
 
 def _combinar(reglas: list[Fila], modelo: list[Fila]) -> list[Fila]:
