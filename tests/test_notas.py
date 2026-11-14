@@ -99,6 +99,42 @@ def test_una_nota_sin_audio_se_saltea():
     assert bus.publicados == []
 
 
+class AlmacenFalso:
+    def __init__(self):
+        self.fotos, self.notas = [], []
+
+    def guardar_foto(self, nota_id, url, contenido):
+        self.fotos.append((nota_id, url, len(contenido)))
+        return True
+
+    def guardar_nota(self, *args):
+        self.notas.append(args)
+        return True
+
+    def guardar(self, *args):
+        return True
+
+
+def test_baja_las_fotos_de_la_nota_y_las_guarda():
+    almacen = AlmacenFalso()
+    p = ProcesadorNotas(PlantaFalsa(), lambda: TranscriptorFijo(NORMAL), BusFalso(), RelojPlanta(), almacen)
+    resultado = p.procesar(nota())
+    assert resultado.fotos == 1
+    assert [(n, u) for n, u, _ in almacen.fotos] == [("NOTA-00200", "/media/fotos/rotura_descarga/01.jpg")]
+
+
+def test_una_foto_que_no_baja_no_frena_la_nota():
+    class PlantaSinFotos(PlantaFalsa):
+        def descargar(self, url):
+            if "/fotos/" in url:
+                raise ConnectionError("no hay foto")
+            return super().descargar(url)
+
+    p = ProcesadorNotas(PlantaSinFotos(), lambda: TranscriptorFijo(NORMAL), BusFalso(), RelojPlanta(), AlmacenFalso())
+    resultado = p.procesar(nota())
+    assert resultado.fotos == 0 and resultado.texto == NORMAL
+
+
 def test_le_pasa_la_nota_transcripta_al_paso_siguiente():
     recibidas = []
     p = procesador(NORMAL, BusFalso())

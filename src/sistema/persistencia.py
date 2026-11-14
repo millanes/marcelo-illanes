@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS notas (
     procesada       timestamptz NOT NULL DEFAULT now()
 );
 
+-- Las fotos de cada nota, bajadas de la planta: son la evidencia del parte y de un escalado.
+CREATE TABLE IF NOT EXISTS fotos (
+    url         text PRIMARY KEY,
+    nota_id     text NOT NULL,
+    contenido   bytea NOT NULL,
+    bajada      timestamptz NOT NULL DEFAULT now()
+);
+
 -- Cada llamado a un modelo de lenguaje: tokens y tiempo, para el registro de consumo y costo.
 CREATE TABLE IF NOT EXISTS usos_modelo (
     id              bigserial PRIMARY KEY,
@@ -159,6 +167,20 @@ class Almacen:
                 return True
             except psycopg.Error as e:
                 log.warning("No se pudo guardar el parte de %s: %s", nota.id, e)
+                self._descartar()
+                return False
+
+    def guardar_foto(self, nota_id: str, url: str, contenido: bytes) -> bool:
+        with self._candado:
+            conexion = self._conectar()
+            if conexion is None:
+                return False
+            try:
+                conexion.execute("INSERT INTO fotos (url, nota_id, contenido) VALUES (%s, %s, %s) "
+                                 "ON CONFLICT (url) DO NOTHING", (url, nota_id, contenido))
+                return True
+            except psycopg.Error as e:
+                log.warning("No se pudo guardar la foto %s: %s", url, e)
                 self._descartar()
                 return False
 

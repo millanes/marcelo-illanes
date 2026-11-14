@@ -8,6 +8,7 @@ cada conversación vive en el proceso y se respalda en Postgres en cada cambio.
 | Qué | Tabla | Para qué | Cuánto tiempo |
 |---|---|---|---|
 | Cada nota: transcripción, condición insegura, tiempos | `notas` | Trazabilidad del parte y evaluación | 2 años (como el historial de órdenes) |
+| Fotos de cada nota (las baja de la planta) | `fotos` | Evidencia del parte y de los escalados | 2 años |
 | Estado de la conversación de cada parte: estado, intento, último mensaje, filas | `partes` | Retomar después de un reinicio; auditar qué se confirmó | Abiertas: hasta que se cierran (150 s sin respuesta las cierra). Cerradas: 2 años |
 | Mensajes que entran y salen por MQTT (sin los sensores) | `mensajes` | Depurar y reconstruir lo que pasó | 90 días |
 | Llamados al modelo de lenguaje: tokens y tiempo | `usos_modelo` | Registro de consumo y costo | 1 año |

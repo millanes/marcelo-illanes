@@ -35,6 +35,7 @@ class NotaProcesada:
     hallazgos: list[Hallazgo]
     segundos_audio: float
     tiempos: dict[str, float] = field(default_factory=dict)   # segundos desde que llegó la nota
+    fotos: int = 0                                            # fotos de la nota que se pudieron bajar
 
 
 class ProcesadorNotas:
@@ -113,11 +114,27 @@ class ProcesadorNotas:
                  tiempos["transcripcion"],
                  f" ALERTA {'+'.join(h.codigo for h in hallazgos)} a los {tiempos['alerta']:.1f} s" if hallazgos else "",
                  texto)
+        resultado.fotos = self._bajar_fotos(nota)
         if self._almacen:
             self._almacen.guardar_nota(nota, texto, [h.codigo for h in hallazgos], resultado.segundos_audio, tiempos)
         for siguiente in self.siguientes:
             siguiente(resultado)
         return resultado
+
+    def _bajar_fotos(self, nota: NotaRecorrida) -> int:
+        """Baja las fotos de la nota y las guarda con ella. Va después de la alerta: no la puede demorar.
+        Una foto que no baja no frena el parte."""
+        bajadas = 0
+        for url in nota.fotos:
+            try:
+                contenido = self._planta.descargar(url)
+            except Exception as e:
+                log.warning("%s: no se pudo bajar la foto %s: %s", nota.id, url, str(e).splitlines()[0])
+                continue
+            bajadas += 1
+            if self._almacen:
+                self._almacen.guardar_foto(nota.id, url, contenido)
+        return bajadas
 
     def _alertar(self, nota: NotaRecorrida, texto: str, hallazgos: list[Hallazgo]) -> None:
         catalogo = self.catalogo
